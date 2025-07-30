@@ -25,7 +25,7 @@ module SKUI
     # @since 1.0.0
     def self.list_objects
       keys = [
-        UI::WebDialog,
+        UI::HtmlDialog,
         Window,
         Base,
         Control,

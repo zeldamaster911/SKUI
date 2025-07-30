@@ -116,7 +116,12 @@ var Bridge = function() {
           busy = true;
           command = message.shift();
           $('#SKUI_JS_BRIDGE').val(message.join( '||' ));
-          window.location = 'skp:SKUI_Callback@' + command;
+          if (typeof sketchup !== 'undefined' &&
+              typeof sketchup.SKUI_Callback === 'function') {
+            sketchup.SKUI_Callback(command);
+          } else {
+            window.location = 'skp:SKUI_Callback@' + command;
+          }
           return true;
         } else {
           return false;
