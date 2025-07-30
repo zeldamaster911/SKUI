@@ -5,7 +5,7 @@ module SKUI
   require File.join( PATH, 'json.rb' )
 
 
-  # Handles the communication between Ruby and the WebDialog.
+  # Handles the communication between Ruby and the HtmlDialog.
   #
   # @since 1.0.0
   class Bridge
@@ -17,7 +17,7 @@ module SKUI
     attr_accessor( :webdialog, :window )
 
     # @param [SKUI::Window] window
-    # @param [UI::WebDialog] webdialog
+    # @param [UI::HtmlDialog] webdialog
     #
     # @since 1.0.0
     def initialize( window, webdialog )

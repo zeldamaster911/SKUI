@@ -82,11 +82,15 @@ module SKUI
 
       @scripts = []
 
-      # Create a dummy WebDialog here in order for the Bridge to respond in a
-      # more sensible manner other than being `nil`. The WebDialog is recreated
+      # Create a dummy HtmlDialog here in order for the Bridge to respond in a
+      # more sensible manner other than being `nil`. The dialog is recreated
       # right before the window is displayed due to a SketchUp bug.
       # @see #show
-      @webdialog = UI::WebDialog.new
+      @webdialog = UI::HtmlDialog.new(
+        :width => 0,
+        :height => 0,
+        :style => UI::HtmlDialog::STYLE_DIALOG
+      )
       @bridge = Bridge.new( self, @webdialog )
     end
 
@@ -187,11 +191,11 @@ module SKUI
       if @webdialog.visible?
         @webdialog.bring_to_front
       else
-        # Recreate WebDialog instance in order for last position and size to be
+        # Recreate HtmlDialog instance in order for last position and size to be
         # used. Otherwise old preferences would be used.
-        @webdialog = init_webdialog( @options )
+        @webdialog = init_dialog( @options )
         @bridge.webdialog = @webdialog
-        # OSX doesn't have modal WebDialogs. Instead a 'modal' WebDialog means
+        # OSX doesn't have modal WebDialogs. Instead a 'modal' HtmlDialog means
         # it'll stay on top of the SketchUp window - where as otherwist it'd
         # fall behind.
         if PLATFORM_IS_OSX
@@ -250,7 +254,7 @@ module SKUI
     # the reference to the `Window` instance. It's not pretty, but it ensures
     # that all objects can be garbage collected.
     #
-    # @param [UI::WebDialog] webdialog
+    # @param [UI::HtmlDialog] webdialog
     # @param [String] callback_name
     # @param [Symbol] method_id
     #
@@ -279,7 +283,7 @@ module SKUI
 
     private
 
-    # @param [UI::WebDialog] webdialog
+    # @param [UI::HtmlDialog] webdialog
     # @param [String] callback_name
     # @param [Symbol] method_id
     #
@@ -295,7 +299,7 @@ module SKUI
     # params possibilities:
     #   "<callback>||<*arguments>"
     #
-    # @param [UI::WebDialog] webdialog
+    # @param [UI::HtmlDialog] webdialog
     # @param [String] params
     #
     # @return [Nil]
@@ -328,7 +332,7 @@ module SKUI
 
     # Called when the HTML DOM is ready.
     #
-    # @param [UI::WebDialog] webdialog
+    # @param [UI::HtmlDialog] webdialog
     #
     # @return [Nil]
     # @since 1.0.0
@@ -383,54 +387,29 @@ module SKUI
 
     # @param [Hash] options Same as #initialize
     #
-    # @return [UI::WebDialog]
+    # @return [UI::HtmlDialog]
     # @since 1.0.0
-    def init_webdialog( options )
-      # Convert options to Webdialog arguments.
-      wd_options = {
-        :dialog_title     => options[:title],
-        :preferences_key  => options[:preferences_key],
-        :resizable        => options[:resizable],
-        :scrollable       => false,
-        :left             => options[:left],
-        :top              => options[:top],
-        :width            => options[:width],
-        :height           => options[:height]
+    def init_dialog( options )
+      # Convert options to HtmlDialog arguments.
+      dlg_options = {
+        :dialog_title    => options[:title],
+        :preferences_key => options[:preferences_key],
+        :resizable       => options[:resizable],
+        :scrollable      => false,
+        :left            => options[:left],
+        :top             => options[:top],
+        :width           => options[:width],
+        :height          => options[:height],
+        :style           => UI::HtmlDialog::STYLE_DIALOG
       }
-      webdialog = UI::WebDialog.new( wd_options )
-      # (?) Not sure if it's needed, but setting this to true for the time being.
-      if webdialog.respond_to?( :set_full_security= )
-        webdialog.set_full_security = true
-      end
-      # Hide the navigation buttons that appear on OSX.
-      if webdialog.respond_to?( :navigation_buttons_enabled= )
-        webdialog.navigation_buttons_enabled = false
-      end
+      webdialog = UI::HtmlDialog.new( dlg_options )
       # Ensure the size for fixed windows is set - otherwise SketchUp will use
       # the last saved properties.
       unless options[:resizable]
-        # OSX has a bug where it ignores the resize flag and let the user resize
-        # the window. Setting the min and max values for width and height works
-        # around this issue.
-        #
-        # To make things worse, OSX sets the client size with the min/max
-        # methods - causing the window to grow if you set the min size to the
-        # desired target size. To account for this we set the min sizes to be
-        # a little less that the desired width. The size should be larger than
-        # the titlebar height.
-        #
-        # All this has to be done before we set the size in order to restore the
-        # desired size because the min/max methods will transpose the external
-        # size to content size.
-        #
-        # The result is that the height is adjustable a little bit, but at least
-        # it's restrained to be close to the desired size. Lesser evil until
-        # this is fixed in SketchUp.
-        webdialog.min_width = options[:width]
-        webdialog.max_width = options[:width]
-        webdialog.min_height = options[:height] - 30
+        webdialog.min_width  = options[:width]
+        webdialog.max_width  = options[:width]
+        webdialog.min_height = options[:height]
         webdialog.max_height = options[:height]
-
         webdialog.set_size( options[:width], options[:height] )
       end
       # Limit the size of the window. The limits can be either an Integer for
@@ -458,11 +437,11 @@ module SKUI
         end
       end
       # (i) If procs are created for #add_action_callback in instance methods
-      #     then the WebDialog instance will not GC. Call a wrapper that
+      #     then the dialog instance will not GC. Call a wrapper that
       #     prevents this.
       add_callback( webdialog, 'SKUI_Callback', :callback_handler )
       # Hook up events to capture when the window closes.
-      webdialog.set_on_close {
+      webdialog.set_on_closed {
         trigger_event( :close )
       }
       # (i) There appear to be differences between OS when the HTML content
